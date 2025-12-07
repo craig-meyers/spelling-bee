@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spelling Bee Practice</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f5fb;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      background: #ffffff;
+      max-width: 700px;
+      width: 100%;
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 16px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: #4f46e5;
+      color: white;
+      font-weight: 600;
+      box-shadow: 0 3px 8px rgba(79,70,229,0.3);
+      transition: transform 0.05s ease, box-shadow 0.05s ease, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+      box-shadow: none;
+    }
+
+    button:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      font-size: 1rem;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.2);
+    }
+
+    .label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #374151;
+    }
+
+    .feedback {
+      margin-top: 8px;
+      font-weight: 600;
+      min-height: 1.2em;
+    }
+
+    .feedback.correct {
+      color: #16a34a;
+    }
+
+    .feedback.incorrect {
+      color: #dc2626;
+    }
+
+    .definition, .sentence {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      margin-top: 4px;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-top: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* Report panel */
+    .report {
+      margin-top: 16px;
+      background: #eef2ff;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 0.85rem;
+    }
+
+    .report h2 {
+      font-size: 0.95rem;
+      margin: 0 0 8px;
+    }
+
+    .report-section-title {
+      font-weight: 600;
+      margin-top: 6px;
+      margin-bottom: 4px;
+    }
+
+    .report-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .report-list li {
+      margin-bottom: 2px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      margin-left: 4px;
+      background: #e0e7ff;
+      color: #1d1b4c;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Spelling Bee Practice</h1>
+    <div class="subtitle">
+      First, <strong>hear the word</strong>. You can also <strong>hear a definition</strong> or 
+      <strong>hear it in a sentence</strong> before you spell it. Star tricky words and check the report to see what to practice.
+    </div>
+
+    <!-- ROW 1: audio controls -->
+    <div class="row">
+      <button id="hearWordBtn">🔊 Hear Word</button>
+      <button id="repeatBtn" class="secondary" disabled>🔁 Repeat Word</button>
+      <button id="hearDefinitionBtn" class="secondary">📖 Hear Definition</button>
+      <button id="hearSentenceBtn" class="secondary">📝 Hear Sentence</button>
+      <button id="revealBtn" class="secondary">👀 Reveal Answer</button>
+    </div>
+
+    <!-- ROW 2: starring + report -->
+    <div class="row">
+      <button id="starBtn" class="secondary">⭐ Mark as tricky</button>
+      <button id="viewReportBtn" class="secondary">📊 View Practice Report</button>
+    </div>
+
+    <div class="label">Type the word:</div>
+    <input type="text" id="answerInput" autocomplete="off" />
+    <div class="row" style="margin-top: 10px;">
+      <button id="checkBtn">✅ Check</button>
+      <button id="nextBtn" class="secondary">➡️ Next Word</button>
+    </div>
+
+    <div id="feedback" class="feedback"></div>
+
+    <div style="margin-top:16px;">
+      <div class="label">Definition</div>
+      <div id="definitionBox" class="definition hidden"></div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <div class="label">Sentence</div>
+      <div id="sentenceBox" class="sentence hidden"></div>
+    </div>
+
+    <div class="meta">
+      <div id="progressText">Word 1 of 1</div>
+      <div id="scoreText">Score: 0 / 0</div>
+    </div>
+
+    <!-- Practice report panel -->
+    <div id="reportPanel" class="report hidden">
+      <h2>Practice Report</h2>
+      <div id="reportContent">
+        No data yet — start practicing to see which words need work.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==== YOUR WORD LIST GOES HERE ====
+    // Replace this small example with the big WORDS array I built for you earlier.
+    const WORDS = [
+  { 
+    word: "verdict",
+    definition: "The decision made by a judge or jury in a court case.",
+    sentence: "The jury's verdict was that the man was not guilty."
+  },
+  { 
+    word: "garbled",
+    definition: "Mixed up and hard to understand.",
+    sentence: "The sound on the phone call was so garbled that I couldn't hear her clearly."
+  },
+  { 
+    word: "encourages",
+    definition: "Gives someone support or confidence to do something.",
+    sentence: "My coach encourages me to keep trying, even when I make mistakes."
+  },
+  { 
+    word: "imitation",
+    definition: "The act of copying someone or something.",
+    sentence: "Her imitation of the cartoon character made everyone laugh."
+  },
+  { 
+    word: "miniature",
+    definition: "Much smaller than normal size; tiny version of something.",
+    sentence: "He collected a miniature model of every car he liked."
+  },
+  { 
+    word: "receptionist",
+    definition: "A person who greets visitors and answers phones at an office or building.",
+    sentence: "The receptionist gave us visitor badges when we arrived."
+  },
+  { 
+    word: "preamble",
+    definition: "An introduction to a speech or a written document, often explaining its purpose.",
+    sentence: "We had to memorize the preamble to the Constitution for homework."
+  },
+  { 
+    word: "plausible",
+    definition: "Seeming reasonable or likely to be true.",
+    sentence: "Her explanation was plausible, so the teacher believed her."
+  },
+  { 
+    word: "reprimanding",
+    definition: "Scolding someone or telling them formally that they did something wrong.",
+    sentence: "The teacher was reprimanding the students for talking during the test."
+  },
+  { 
+    word: "commotion",
+    definition: "Noisy confusion or disorder.",
+    sentence: "There was a loud commotion in the hallway when the bell rang."
+  },
+  { 
+    word: "oblivion",
+    definition: "A state of not being aware of what is happening around you.",
+    sentence: "He played his video game in total oblivion to the noise in the room."
+  },
+  { 
+    word: "immigrants",
+    definition: "People who move to live in a new country permanently.",
+    sentence: "Many immigrants came to the city to start a new life."
+  },
+  { 
+    word: "steeple",
+    definition: "A tall, pointed tower on a church or building.",
+    sentence: "We could see the church steeple from miles away."
+  },
+  { 
+    word: "spectators",
+    definition: "People who watch an event, like a game or performance.",
+    sentence: "The spectators cheered loudly when the team scored."
+  },
+  { 
+    word: "lanyards",
+    definition: "Straps or cords worn around the neck to hold ID cards or keys.",
+    sentence: "Students wore lanyards with their school ID cards on them."
+  },
+  { 
+    word: "suspicious",
+    definition: "Feeling that something is wrong or that someone may be guilty.",
+    sentence: "The guard was suspicious of the strange noise in the building."
+  },
+  { 
+    word: "parchment",
+    definition: "A type of thick, old-fashioned paper or animal skin used for writing.",
+    sentence: "The ancient map was drawn on yellowed parchment."
+  },
+  { 
+    word: "ramshackle",
+    definition: "In very bad condition and likely to fall apart.",
+    sentence: "They lived in a ramshackle house at the end of the road."
+  },
+  { 
+    word: "fugitive",
+    definition: "A person who is running away, especially from the law.",
+    sentence: "The fugitive tried to hide in the forest."
+  },
+  { 
+    word: "heron",
+    definition: "A tall bird with long legs and a long neck that often stands in water.",
+    sentence: "We saw a heron standing quietly by the lake."
+  },
+  { 
+    word: "dissolving",
+    definition: "Breaking apart and mixing into a liquid.",
+    sentence: "The sugar was dissolving quickly in the hot tea."
+  },
+  { 
+    word: "nomad",
+    definition: "A person who moves from place to place instead of living in one spot.",
+    sentence: "As a nomad, he never stayed in the same village for long."
+  },
+  { 
+    word: "billowed",
+    definition: "Swelled out or puffed up, usually by wind or air.",
+    sentence: "The sails billowed in the strong ocean wind."
+  },
+  { 
+    word: "skewer",
+    definition: "A thin stick used to hold pieces of food together while they cook.",
+    sentence: "We cooked vegetables on a skewer over the grill."
+  },
+  { 
+    word: "Berlin",
+    definition: "The capital city of Germany.",
+    sentence: "My aunt traveled to Berlin to see the famous landmarks."
+  },
+  { 
+    word: "lunacy",
+    definition: "Extreme foolishness or craziness.",
+    sentence: "Trying to run a marathon without training would be pure lunacy."
+  },
+  { 
+    word: "conjure",
+    definition: "To make something appear as if by magic; to bring to mind.",
+    sentence: "The magician seemed to conjure a rabbit out of thin air."
+  },
+  { 
+    word: "bracken",
+    definition: "A large, coarse fern that often grows in wild areas.",
+    sentence: "We walked through thick bracken on the forest path."
+  },
+  { 
+    word: "noggin",
+    definition: "A playful word meaning head.",
+    sentence: "He bumped his noggin on the low doorway."
+  },
+  { 
+    word: "neon",
+    definition: "A bright, glowing light or color, often used in signs.",
+    sentence: "The neon sign lit up the street at night."
+  },
+  { 
+    word: "rakish",
+    definition: "Stylish in a slightly bold or playful way.",
+    sentence: "He wore his hat at a rakish angle over one eye."
+  },
+  { 
+    word: "hypnosis",
+    definition: "A trance-like state where a person is very focused and suggestible.",
+    sentence: "The show included a man who performed hypnosis on volunteers."
+  },
+  { 
+    word: "rotunda",
+    definition: "A round building or room, often with a dome.",
+    sentence: "The museum's main entrance was inside a grand rotunda."
+  },
+  { 
+    word: "gusto",
+    definition: "Energetic enjoyment and enthusiasm.",
+    sentence: "She ate her birthday cake with great gusto."
+  },
+  { 
+    word: "toiletries",
+    definition: "Personal care items like soap, toothpaste, and shampoo.",
+    sentence: "I packed my toiletries in a small travel bag."
+  },
+  { 
+    word: "gleaned",
+    definition: "Gathered information or small amounts of something, bit by bit.",
+    sentence: "He gleaned clues from the notes on the desk."
+  },
+  { 
+    word: "jeered",
+    definition: "Shouted at someone in a mean or mocking way.",
+    sentence: "The crowd jeered when the referee made a bad call."
+  },
+  { 
+    word: "winsome",
+    definition: "Attractive and charming in a sweet way.",
+    sentence: "Her winsome smile made everyone feel welcome."
+  },
+  { 
+    word: "prattling",
+    definition: "Talking a lot in a silly or meaningless way.",
+    sentence: "The toddlers were prattling happily to each other."
+  },
+  { 
+    word: "galore",
+    definition: "In large amounts; plenty of something.",
+    sentence: "There were balloons galore at the party."
+  },
+  { 
+    word: "emporium",
+    definition: "A large store that sells many different kinds of things.",
+    sentence: "We visited an emporium that sold toys, books, and clothes."
+  },
+  { 
+    word: "atrium",
+    definition: "A large open space inside a building, often with a glass roof.",
+    sentence: "The hotel lobby opened into a bright atrium filled with plants."
+  },
+  { 
+    word: "eccentric",
+    definition: "Behaving in a way that is unusual or a bit odd.",
+    sentence: "Their eccentric neighbor wore sandals in the snow."
+  },
+  { 
+    word: "savant",
+    definition: "A person who is extremely knowledgeable or talented in a certain area.",
+    sentence: "The music savant could play any song after hearing it once."
+  },
+  { 
+    word: "almanac",
+    definition: "A yearly book with information like calendars, weather, and facts.",
+    sentence: "He looked up the sunrise time in the farmer's almanac."
+  },
+  { 
+    word: "hippies",
+    definition: "People, especially from the 1960s and 70s, who rejected traditional rules and often promoted peace and love.",
+    sentence: "The museum had photos of hippies at old music festivals."
+  },
+  { 
+    word: "samosas",
+    definition: "Fried or baked pastry pockets filled with spiced vegetables or meat.",
+    sentence: "We shared a plate of hot samosas before dinner."
+  },
+  { 
+    word: "campaign",
+    definition: "A planned series of actions to reach a goal, like winning an election.",
+    sentence: "The class started a campaign to reduce plastic waste at school."
+  },
+  { 
+    word: "pistachio",
+    definition: "A small green nut that is often eaten as a snack or used in desserts.",
+    sentence: "She ordered pistachio ice cream in a waffle cone."
+  },
+  { 
+    word: "mosque",
+    definition: "A building where Muslims gather to pray.",
+    sentence: "We saw a beautiful mosque with a tall minaret in the city."
+  },
+  { 
+    word: "bait",
+    definition: "Food or something attractive used to lure animals or people.",
+    sentence: "They used worms as bait to catch fish."
+  },
+  { 
+    word: "lure",
+    definition: "To attract or tempt someone or something.",
+    sentence: "The bright lights of the fair can lure people from far away."
+  },
+  { 
+    word: "cluster",
+    definition: "A group of things that are close together.",
+    sentence: "A cluster of stars shone brightly in the night sky."
+  },
+  { 
+    word: "forest",
+    definition: "A large area filled mainly with trees.",
+    sentence: "We hiked through the forest for hours."
+  },
+  { 
+    word: "hollow",
+    definition: "Having an empty space inside; or a small valley-like area.",
+    sentence: "The log was hollow, and a squirrel lived inside it."
+  },
+  { 
+    word: "spinning",
+    definition: "Turning around and around quickly.",
+    sentence: "The top kept spinning on the table for a long time."
+  },
+  { 
+    word: "baffling",
+    definition: "Very confusing or hard to understand.",
+    sentence: "The math puzzle was baffling at first."
+  },
+  { 
+    word: "sizzling",
+    definition: "Making a hissing sound like something hot cooking; very hot.",
+    sentence: "We could hear the bacon sizzling in the pan."
+  },
+  { 
+    word: "hoist",
+    definition: "To lift something up, usually with effort.",
+    sentence: "They used a rope to hoist the flag up the pole."
+  },
+  { 
+    word: "search",
+    definition: "To look carefully for something.",
+    sentence: "We had to search the house to find his missing backpack."
+  },
+  { 
+    word: "remind",
+    definition: "To help someone remember something.",
+    sentence: "Please remind me to charge my tablet tonight."
+  },
+  { 
+    word: "mango",
+    definition: "A sweet tropical fruit with yellow or orange flesh.",
+    sentence: "She sliced a ripe mango for dessert."
+  },
+  { 
+    word: "coral",
+    definition: "A hard substance made from tiny sea animals; also a pinkish-orange color.",
+    sentence: "We saw colorful fish swimming near the coral reef."
+  },
+  { 
+    word: "jangle",
+    definition: "To make a harsh, clinking sound.",
+    sentence: "The keys began to jangle in his pocket as he walked."
+  },
+  { 
+    word: "shimmer",
+    definition: "To shine with a soft, wavering light.",
+    sentence: "The lake seemed to shimmer under the moonlight."
+  },
+  { 
+    word: "blossoms",
+    definition: "Flowers, especially on trees or bushes.",
+    sentence: "In spring, the cherry tree is covered in pink blossoms."
+  },
+  { 
+    word: "swampy",
+    definition: "Wet, muddy, and soft like a swamp.",
+    sentence: "We avoided the swampy part of the trail so we wouldn't sink."
+  },
+  { 
+    word: "studded",
+    definition: "Covered or decorated with many small raised things.",
+    sentence: "The jacket was studded with shiny metal buttons."
+  },
+  { 
+    word: "focus",
+    definition: "To pay careful attention to something.",
+    sentence: "You need to focus on the problem to solve it."
+  },
+  { 
+    word: "distress",
+    definition: "Great worry, pain, or sadness.",
+    sentence: "The dog barked in distress during the thunderstorm."
+  },
+  { 
+    word: "lessons",
+    definition: "Times set aside to learn something.",
+    sentence: "She has piano lessons every Thursday."
+  },
+  { 
+    word: "moment",
+    definition: "A very short period of time.",
+    sentence: "Wait just a moment while I grab my coat."
+  },
+  { 
+    word: "ajar",
+    definition: "Slightly open.",
+    sentence: "The door was left ajar, letting in a cold breeze."
+  },
+  { 
+    word: "basil",
+    definition: "A fragrant green herb used in cooking.",
+    sentence: "We sprinkled fresh basil on top of the pasta."
+  },
+  { 
+    word: "triple",
+    definition: "Three times as much or as many.",
+    sentence: "He ordered a triple scoop ice cream cone."
+  },
+  { 
+    word: "satin",
+    definition: "A smooth, shiny kind of fabric.",
+    sentence: "The dress was made of blue satin that shimmered in the light."
+  },
+  { 
+    word: "ahoy",
+    definition: "A call used to get attention, especially on a boat.",
+    sentence: "The pirate shouted 'Ahoy!' when he saw another ship."
+  },
+  { 
+    word: "signal",
+    definition: "A sign or action that sends a message.",
+    sentence: "The green light is a signal that it’s safe to go."
+  },
+  { 
+    word: "answer",
+    definition: "A response to a question or problem.",
+    sentence: "She raised her hand with an answer ready."
+  },
+  { 
+    word: "shuffle",
+    definition: "To walk by sliding your feet; or to mix cards.",
+    sentence: "Please shuffle the cards before dealing them."
+  },
+  { 
+    word: "dollop",
+    definition: "A small, soft lump of something like cream or mashed potatoes.",
+    sentence: "He added a dollop of whipped cream to his pie."
+  },
+  { 
+    word: "minnows",
+    definition: "Very small fish, often used as bait.",
+    sentence: "We saw minnows darting around in the shallow water."
+  },
+  { 
+    word: "silver",
+    definition: "A shiny gray-white metal; also a color.",
+    sentence: "She wore a silver bracelet on her wrist."
+  },
+  { 
+    word: "before",
+    definition: "Earlier than a particular time or event.",
+    sentence: "Finish your homework before you play games."
+  },
+  { 
+    word: "circus",
+    definition: "A traveling show with clowns, animals, and performers.",
+    sentence: "We went to the circus and saw acrobats fly through the air."
+  },
+  { 
+    word: "writing",
+    definition: "The act of putting words down on paper or a screen.",
+    sentence: "His writing has improved a lot this year."
+  },
+  { 
+    word: "kitchen",
+    definition: "The room where food is prepared and cooked.",
+    sentence: "The smell of cookies filled the kitchen."
+  },
+  { 
+    word: "sugar",
+    definition: "A sweet substance used to flavor food and drinks.",
+    sentence: "She stirred sugar into her tea."
+  },
+  { 
+    word: "awkward",
+    definition: "Uncomfortable or clumsy; not smooth.",
+    sentence: "It felt awkward when no one laughed at his joke."
+  },
+  { 
+    word: "seep",
+    definition: "To slowly leak or flow through small openings.",
+    sentence: "Water began to seep under the door after the storm."
+  },
+  { 
+    word: "sweet",
+    definition: "Tasting like sugar; or kind and gentle.",
+    sentence: "The cake was very sweet and moist."
+  },
+  { 
+    word: "wheels",
+    definition: "Round objects that roll and help vehicles move.",
+    sentence: "The bike's wheels spun fast as he raced downhill."
+  },
+  { 
+    word: "faint",
+    definition: "Weak or hard to see, hear, or feel; or to briefly lose consciousness.",
+    sentence: "There was a faint smell of smoke in the air."
+  },
+  { 
+    word: "fruit",
+    definition: "The sweet, fleshy part of a plant that holds seeds.",
+    sentence: "She packed some fruit in her lunchbox."
+  },
+  { 
+    word: "roam",
+    definition: "To wander around without a fixed path.",
+    sentence: "We like to roam the park and explore new trails."
+  },
+  { 
+    word: "goats",
+    definition: "Farm animals with horns that often climb and eat plants.",
+    sentence: "The goats climbed up the rocky hill with ease."
+  },
+  { 
+    word: "woozy",
+    definition: "Feeling dizzy, weak, or unsteady.",
+    sentence: "He felt woozy after spinning in circles."
+  },
+  { 
+    word: "limbs",
+    definition: "Arms and legs of a person or animal; large branches of a tree.",
+    sentence: "His limbs felt tired after the long run."
+  },
+  { 
+    word: "ahead",
+    definition: "In front or in the future.",
+    sentence: "The road ahead looked clear and bright."
+  },
+  { 
+    word: "señor",
+    definition: "A Spanish word for 'Mr.' or 'sir.'",
+    sentence: "Señor Garcia greeted the class with a smile."
+  },
+  { 
+    word: "unicorn",
+    definition: "A mythical horse-like animal with a single horn on its forehead.",
+    sentence: "She drew a picture of a unicorn jumping over a rainbow."
+  },
+  { 
+    word: "faraway",
+    definition: "Very distant.",
+    sentence: "He dreamed of traveling to faraway lands."
+  },
+  { 
+    word: "heater",
+    definition: "A device that warms up a room or space.",
+    sentence: "We turned on the heater when it got cold."
+  },
+  { 
+    word: "pirates",
+    definition: "Sailors who steal from other ships, especially in stories.",
+    sentence: "The pirates searched for buried treasure on the island."
+  },
+  { 
+    word: "understand",
+    definition: "To know what something means or why it happens.",
+    sentence: "I didn't understand the question, so I asked for help."
+  },
+  { 
+    word: "wooden",
+    definition: "Made of wood.",
+    sentence: "They crossed the river on a wooden bridge."
+  },
+  { 
+    word: "leaning",
+    definition: "Bending or resting against something at an angle.",
+    sentence: "The ladder was leaning against the wall."
+  },
+  { 
+    word: "breakfast",
+    definition: "The first meal of the day.",
+    sentence: "For breakfast, he ate eggs and toast."
+  },
+  { 
+    word: "window",
+    definition: "An opening in a wall with glass that lets in light.",
+    sentence: "Rain tapped gently on the window."
+  },
+  { 
+    word: "acrobat",
+    definition: "A performer who does flips, jumps, and balance tricks.",
+    sentence: "The acrobat flipped high above the crowd at the circus."
+  },
+  { 
+    word: "message",
+    definition: "Information sent from one person to another.",
+    sentence: "She left a message on his phone."
+  },
+  { 
+    word: "chocolate",
+    definition: "A sweet, brown treat made from cocoa beans.",
+    sentence: "He received a box of chocolate for his birthday."
+  },
+  { 
+    word: "forepaw",
+    definition: "One of the front feet of an animal like a dog or cat.",
+    sentence: "The puppy raised its forepaw to shake hands."
+  },
+  { 
+    word: "elephant",
+    definition: "A very large animal with a trunk and tusks.",
+    sentence: "The elephant sprayed water with its trunk."
+  },
+  { 
+    word: "hedgehog",
+    definition: "A small animal covered with short, sharp spines.",
+    sentence: "The hedgehog curled into a ball when it was scared."
+  },
+  { 
+    word: "recipe",
+    definition: "A set of instructions for making food.",
+    sentence: "We followed a recipe to bake the cake."
+  },
+  { 
+    word: "garbage",
+    definition: "Waste or trash that is thrown away.",
+    sentence: "He took the garbage out to the curb."
+  },
+  { 
+    word: "surprise",
+    definition: "Something unexpected; or the feeling of being amazed.",
+    sentence: "The party was a complete surprise to her."
+  },
+  { 
+    word: "mermaid",
+    definition: "A mythical creature that is half human and half fish.",
+    sentence: "The story was about a mermaid who lived under the sea."
+  },
+  { 
+    word: "bombarded",
+    definition: "Attacked or hit again and again, or given too much of something.",
+    sentence: "He was bombarded with questions after his big win."
+  },
+  { 
+    word: "disability",
+    definition: "A physical or mental condition that makes certain activities harder.",
+    sentence: "The ramp helped students with a disability enter the building."
+  },
+  { 
+    word: "incredible",
+    definition: "Very hard to believe; amazing.",
+    sentence: "The magician's tricks were absolutely incredible."
+  },
+  { 
+    word: "leather",
+    definition: "Material made from animal skin, used for shoes and bags.",
+    sentence: "He wore a leather jacket on the chilly day."
+  },
+  { 
+    word: "countess",
+    definition: "A woman with a noble title, similar to an earl's wife or female equivalent.",
+    sentence: "The countess hosted a grand dinner at her castle."
+  },
+  { 
+    word: "nervous",
+    definition: "Worried or anxious about something.",
+    sentence: "She felt nervous before her big test."
+  },
+  { 
+    word: "peppercorn",
+    definition: "A small dried berry used to make pepper spice.",
+    sentence: "The chef crushed a peppercorn to season the steak."
+  },
+  { 
+    word: "cartwheel",
+    definition: "A sideways hands-and-feet flip like a spinning wheel.",
+    sentence: "She did a cartwheel across the gym floor."
+  },
+  { 
+    word: "raise",
+    definition: "To lift something up; or to increase something like money or salary.",
+    sentence: "We hope to raise money for the school trip."
+  },
+  { 
+    word: "weather",
+    definition: "The condition of the air outside, like rain or sunshine.",
+    sentence: "The weather today is warm and sunny."
+  },
+  { 
+    word: "zooming",
+    definition: "Moving very quickly.",
+    sentence: "The cars were zooming down the highway."
+  },
+  { 
+    word: "attacked",
+    definition: "Went after someone or something to harm it.",
+    sentence: "The cat attacked the toy mouse."
+  },
+  { 
+    word: "turnout",
+    definition: "The number of people who show up for an event.",
+    sentence: "The school concert had a great turnout."
+  },
+  { 
+    word: "eaten",
+    definition: "Consumed as food; past participle of eat.",
+    sentence: "He had already eaten lunch when we arrived."
+  },
+  { 
+    word: "streetlights",
+    definition: "Lights on poles along roads and sidewalks.",
+    sentence: "The streetlights flickered on as it got dark."
+  },
+  { 
+    word: "journey",
+    definition: "A trip from one place to another.",
+    sentence: "Their journey took them across the entire country."
+  },
+  { 
+    word: "courtyard",
+    definition: "An open space surrounded by buildings or walls.",
+    sentence: "Students ate lunch in the sunny courtyard."
+  },
+  { 
+    word: "shouting",
+    definition: "Speaking very loudly.",
+    sentence: "We heard shouting from the playground."
+  },
+  { 
+    word: "asleep",
+    definition: "In a state of sleep.",
+    sentence: "By nine o'clock, the baby was fast asleep."
+  },
+  { 
+    word: "curious",
+    definition: "Eager to know or learn something.",
+    sentence: "He was curious about how the robot worked."
+  },
+  { 
+    word: "dinosaur",
+    definition: "A type of large reptile that lived millions of years ago.",
+    sentence: "The museum had a huge dinosaur skeleton on display."
+  },
+  { 
+    word: "brilliant",
+    definition: "Very bright or very smart.",
+    sentence: "She had a brilliant idea for the science fair."
+  },
+  { 
+    word: "vacuum",
+    definition: "A machine that sucks up dust; or empty space with no air.",
+    sentence: "I used the vacuum to clean the rug."
+  },
+  { 
+    word: "gorgeous",
+    definition: "Extremely beautiful or attractive.",
+    sentence: "The sunset over the lake was absolutely gorgeous."
+  },
+  { 
+    word: "monsoon",
+    definition: "A season of heavy rains and winds in some parts of the world.",
+    sentence: "During the monsoon, it can rain for days."
+  },
+  { 
+    word: "dangerous",
+    definition: "Likely to cause harm or injury.",
+    sentence: "It is dangerous to play in the street."
+  },
+  { 
+    word: "avocado",
+    definition: "A pear-shaped fruit with green flesh and a large seed.",
+    sentence: "She mashed an avocado to make guacamole."
+  },
+  { 
+    word: "valentine",
+    definition: "A card or message of love, often given on Valentine's Day.",
+    sentence: "He made a valentine for his best friend."
+  },
+  { 
+    word: "February",
+    definition: "The second month of the year.",
+    sentence: "Valentine's Day is in February."
+  },
+  { 
+    word: "formation",
+    definition: "The way something is arranged or put together.",
+    sentence: "The birds flew in a V-shaped formation."
+  },
+  { 
+    word: "especially",
+    definition: "More than usually; particularly.",
+    sentence: "She loves all sports, especially basketball."
+  },
+  { 
+    word: "hesitate",
+    definition: "To pause before doing something, usually because of uncertainty.",
+    sentence: "He didn't hesitate to help his friend."
+  },
+  { 
+    word: "scorcher",
+    definition: "An extremely hot day.",
+    sentence: "Yesterday was a real scorcher, so we stayed inside."
+  },
+  { 
+    word: "scavenger",
+    definition: "An animal that eats dead things; or a person who collects discarded items.",
+    sentence: "A vulture is a scavenger that feeds on leftovers in nature."
+  },
+  { 
+    word: "fragments",
+    definition: "Small broken pieces of something.",
+    sentence: "The glass shattered into tiny fragments."
+  },
+  { 
+    word: "deflated",
+    definition: "Let the air out; or felt suddenly disappointed.",
+    sentence: "The balloon deflated overnight and lay flat on the floor."
+  },
+  { 
+    word: "unleash",
+    definition: "To release or set something free.",
+    sentence: "The coach told the team to unleash their energy in the final quarter."
+  },
+  { 
+    word: "ration",
+    definition: "A fixed amount of food or supplies given out.",
+    sentence: "Each camper received a ration of snacks for the hike."
+  },
+  { 
+    word: "cosmetics",
+    definition: "Products used to improve or change how someone looks, like makeup.",
+    sentence: "The store sells cosmetics such as lipstick and mascara."
+  },
+  { 
+    word: "crawdad",
+    definition: "A small, lobster-like animal that lives in freshwater; also called crayfish.",
+    sentence: "We caught a crawdad in the creek behind the house."
+  },
+  { 
+    word: "frustration",
+    definition: "The feeling of being upset because you can't do something.",
+    sentence: "He felt frustration when the puzzle wouldn't fit together."
+  },
+  { 
+    word: "unruly",
+    definition: "Hard to control; not behaving well.",
+    sentence: "The unruly class would not quiet down."
+  },
+  { 
+    word: "mascot",
+    definition: "A character or animal that represents a team or group.",
+    sentence: "The eagle is our school mascot."
+  },
+  { 
+    word: "aroma",
+    definition: "A pleasant smell.",
+    sentence: "The aroma of fresh bread filled the kitchen."
+  },
+  { 
+    word: "moustache",
+    definition: "Hair grown on the upper lip.",
+    sentence: "The actor wore a fake moustache for the play."
+  },
+  { 
+    word: "artifacts",
+    definition: "Objects made by humans, often from long ago.",
+    sentence: "The museum displayed artifacts from ancient Egypt."
+  },
+  { 
+    word: "perfume",
+    definition: "A liquid with a pleasant smell that people put on their skin or clothes.",
+    sentence: "She sprayed a little perfume on her wrist."
+  },
+  { 
+    word: "mustache",
+    definition: "Hair grown on the upper lip; American spelling of moustache.",
+    sentence: "He shaved off his mustache for a new look."
+  },
+  { 
+    word: "artefacts",
+    definition: "Objects made by humans, often from long ago; British spelling of artifacts.",
+    sentence: "We studied old stone tools and other artefacts in history class."
+  },
+  { 
+    word: "discoveries",
+    definition: "Things that are found or learned for the first time.",
+    sentence: "Her science project led to some interesting discoveries."
+  },
+  { 
+    word: "sinister",
+    definition: "Seeming evil or threatening.",
+    sentence: "The old house looked sinister in the fog."
+  },
+  { 
+    word: "tuxedo",
+    definition: "A formal black suit worn for special events.",
+    sentence: "He wore a tuxedo to the fancy dinner."
+  },
+  { 
+    word: "prognosis",
+    definition: "A doctor's prediction about how an illness will develop.",
+    sentence: "The doctor's prognosis was that she would recover quickly."
+  },
+  { 
+    word: "lurches",
+    definition: "Moves suddenly and unsteadily.",
+    sentence: "The bus lurches forward when the driver hits the gas."
+  },
+  { 
+    word: "language",
+    definition: "A system of words people use to communicate.",
+    sentence: "English is the language we speak at school."
+  },
+  { 
+    word: "gallop",
+    definition: "To run fast, like a horse.",
+    sentence: "We watched the horses gallop across the field."
+  },
+  { 
+    word: "Buffalo",
+    definition: "A large animal with shaggy hair and horns; also a city in New York.",
+    sentence: "We saw a buffalo grazing in the grassland."
+  },
+  { 
+    word: "sequins",
+    definition: "Small, shiny discs sewn onto clothing for decoration.",
+    sentence: "Her costume was covered in sparkling sequins."
+  },
+  { 
+    word: "fluently",
+    definition: "Able to speak or write a language easily and smoothly.",
+    sentence: "He speaks Spanish fluently."
+  },
+  { 
+    word: "fabulous",
+    definition: "Very good; wonderful.",
+    sentence: "We had a fabulous time at the amusement park."
+  },
+  { 
+    word: "lanky",
+    definition: "Tall and thin with long arms and legs.",
+    sentence: "The lanky player could reach the basketball hoop easily."
+  },
+  { 
+    word: "sardines",
+    definition: "Small fish that are often canned and eaten.",
+    sentence: "He opened a tin of sardines for lunch."
+  },
+  { 
+    word: "mysterious",
+    definition: "Strange or hard to explain.",
+    sentence: "A mysterious light appeared in the sky."
+  },
+  { 
+    word: "brandished",
+    definition: "Waved something, especially a weapon, in a threatening or excited way.",
+    sentence: "The knight brandished his sword above his head."
+  },
+  { 
+    word: "rickety",
+    definition: "Shaky and likely to collapse.",
+    sentence: "The rickety chair wobbled when he sat on it."
+  },
+  { 
+    word: "anguish",
+    definition: "Severe pain or great suffering of mind or body.",
+    sentence: "She cried out in anguish when she lost her favorite pet."
+  },
+  { 
+    word: "conical",
+    definition: "Shaped like a cone.",
+    sentence: "They wore conical party hats on New Year's Eve."
+  },
+  { 
+    word: "porridge",
+    definition: "A soft food made by boiling grains like oats in water or milk.",
+    sentence: "He ate a bowl of warm porridge for breakfast."
+  },
+  { 
+    word: "lilt",
+    definition: "A light, rising and falling rhythm in a person's speech or in music.",
+    sentence: "Her voice had a cheerful lilt when she sang."
+  },
+  { 
+    word: "pediatric",
+    definition: "Having to do with the medical care of children.",
+    sentence: "She has a checkup with her pediatric doctor tomorrow."
+  },
+  { 
+    word: "beige",
+    definition: "A light brown or tan color.",
+    sentence: "The walls of the room were painted beige."
+  },
+  { 
+    word: "democracy",
+    definition: "A system of government where people vote to choose leaders.",
+    sentence: "In a democracy, citizens help make decisions by voting."
+  },
+  { 
+    word: "rummage",
+    definition: "To search through things in a messy way.",
+    sentence: "He had to rummage through his desk to find the pencil."
+  },
+  { 
+    word: "gaunt",
+    definition: "Very thin and bony, often from hunger or sickness.",
+    sentence: "The stray dog looked gaunt and tired."
+  },
+  { 
+    word: "ancestral",
+    definition: "Related to ancestors or people from whom you are descended.",
+    sentence: "They visited their ancestral home in another country."
+  },
+  { 
+    word: "grimace",
+    definition: "A twisted facial expression showing pain or dislike.",
+    sentence: "He made a grimace when he tasted the sour candy."
+  },
+  { 
+    word: "nautical",
+    definition: "Related to ships, sailors, or sailing.",
+    sentence: "The store sold nautical decorations like anchors and ship wheels."
+  },
+  { 
+    word: "enormous",
+    definition: "Very, very large.",
+    sentence: "The whale was enormous compared to the boat."
+  },
+  { 
+    word: "geranium",
+    definition: "A type of flowering plant often grown in pots or gardens.",
+    sentence: "A bright red geranium sat on the windowsill."
+  },
+  { 
+    word: "foreign",
+    definition: "From another country.",
+    sentence: "She tried a foreign candy she had never seen before."
+  },
+  { 
+    word: "dubious",
+    definition: "Doubtful or not sure about something.",
+    sentence: "He gave her a dubious look when she told the wild story."
+  },
+  { 
+    word: "ebony",
+    definition: "A very dark black color; also a type of dark hardwood.",
+    sentence: "The piano keys were made of ivory and ebony."
+  },
+  { 
+    word: "paltry",
+    definition: "Very small or unimportant.",
+    sentence: "He received a paltry amount of allowance for such a big job."
+  }
+];
+
+    // ==== END WORD LIST ====
+
+    // Stats for each word: attempts, correct, incorrect, starred
+    const stats = WORDS.map(() => ({
+      attempts: 0,
+      correct: 0,
+      incorrect: 0,
+      starred: false
+    }));
+
+    let currentIndex = 0;
+    let correctCount = 0;
+    let totalAnswered = 0;
+
+    const hearWordBtn = document.getElementById("hearWordBtn");
+    const repeatBtn = document.getElementById("repeatBtn");
+    const hearDefinitionBtn = document.getElementById("hearDefinitionBtn");
+    const hearSentenceBtn = document.getElementById("hearSentenceBtn");
+    const revealBtn = document.getElementById("revealBtn");
+    const starBtn = document.getElementById("starBtn");
+    const viewReportBtn = document.getElementById("viewReportBtn");
+    const checkBtn = document.getElementById("checkBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const answerInput = document.getElementById("answerInput");
+    const feedback = document.getElementById("feedback");
+    const definitionBox = document.getElementById("definitionBox");
+    const sentenceBox = document.getElementById("sentenceBox");
+    const progressText = document.getElementById("progressText");
+    const scoreText = document.getElementById("scoreText");
+    const reportPanel = document.getElementById("reportPanel");
+    const reportContent = document.getElementById("reportContent");
+
+    function getCurrentWord() {
+      return WORDS[currentIndex];
+    }
+
+    function speak(text) {
+      if (!("speechSynthesis" in window)) {
+        alert("Text-to-speech is not supported in this browser.");
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9; // a bit slower for clarity
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function updateStarButton() {
+      const s = stats[currentIndex];
+      starBtn.textContent = s.starred ? "⭐ Unmark tricky" : "⭐ Mark as tricky";
+    }
+
+    function updateUIForWord() {
+      const w = getCurrentWord();
+      feedback.textContent = "";
+      feedback.className = "feedback";
+      answerInput.value = "";
+      definitionBox.textContent = w.definition;
+      sentenceBox.textContent = w.sentence;
+      definitionBox.classList.add("hidden");
+      sentenceBox.classList.add("hidden");
+
+      progressText.textContent = `Word ${currentIndex + 1} of ${WORDS.length}`;
+      scoreText.textContent = `Score: ${correctCount} / ${totalAnswered}`;
+
+      repeatBtn.disabled = true;
+      updateStarButton();
+      answerInput.focus();
+    }
+
+    function checkAnswer() {
+      const user = answerInput.value.trim().toLowerCase();
+      const correctSpelling = getCurrentWord().word.toLowerCase();
+
+      if (!user) return;
+
+      totalAnswered++;
+      const s = stats[currentIndex];
+      s.attempts++;
+
+      if (user === correctSpelling) {
+        correctCount++;
+        s.correct++;
+        feedback.textContent = "Correct! 🎉";
+        feedback.classList.add("correct");
+      } else {
+        s.incorrect++;
+        feedback.textContent = `Not quite. The correct spelling is "${getCurrentWord().word}".`;
+        feedback.classList.add("incorrect");
+      }
+
+      scoreText.textContent = `Score: ${correctCount} / ${totalAnswered}`;
+      definitionBox.classList.remove("hidden");
+      sentenceBox.classList.remove("hidden");
+    }
+
+    function nextWord() {
+      currentIndex++;
+      if (currentIndex >= WORDS.length) {
+        currentIndex = 0; // loop back to start
+      }
+      updateUIForWord();
+    }
+
+    function buildReport() {
+      // If nothing has been done yet:
+      const anyAttempts = stats.some(s => s.attempts > 0 || s.starred);
+      if (!anyAttempts) {
+        reportContent.textContent = "No data yet — practice some words, star tricky ones, and then check back here.";
+        return;
+      }
+
+      const items = WORDS.map((w, idx) => ({
+        idx,
+        word: w.word,
+        attempts: stats[idx].attempts,
+        correct: stats[idx].correct,
+        incorrect: stats[idx].incorrect,
+        starred: stats[idx].starred
+      }));
+
+      const starred = items.filter(i => i.starred);
+      const missed = items
+        .filter(i => i.incorrect > 0)
+        .sort((a, b) => b.incorrect - a.incorrect);
+
+      let html = "";
+
+      // Starred tricky words
+      html += `<div class="report-section-title">⭐ Starred tricky words</div>`;
+      if (starred.length === 0) {
+        html += `<div>No words have been starred yet.</div>`;
+      } else {
+        html += `<ul class="report-list">`;
+        starred.forEach(i => {
+          html += `<li>${i.word}<span class="tag">attempts: ${i.attempts}, wrong: ${i.incorrect}</span></li>`;
+        });
+        html += `</ul>`;
+      }
+
+      // Missed words
+      html += `<div class="report-section-title" style="margin-top:8px;">❌ Words often missed</div>`;
+      if (missed.length === 0) {
+        html += `<div>Great job! No words have been missed yet.</div>`;
+      } else {
+        html += `<ul class="report-list">`;
+        missed.forEach(i => {
+          const accuracy = i.attempts > 0 ? Math.round((i.correct / i.attempts) * 100) : 0;
+          html += `<li>${i.word}<span class="tag">${i.incorrect} wrong, ${accuracy}% correct</span></li>`;
+        });
+        html += `</ul>`;
+      }
+
+      reportContent.innerHTML = html;
+    }
+
+    // ==== EVENT LISTENERS ====
+    hearWordBtn.addEventListener("click", () => {
+      const w = getCurrentWord();
+      speak(w.word);
+      repeatBtn.disabled = false;
+    });
+
+    repeatBtn.addEventListener("click", () => {
+      const w = getCurrentWord();
+      speak(w.word);
+    });
+
+    hearDefinitionBtn.addEventListener("click", () => {
+      const w = getCurrentWord();
+      speak(`${w.word}. Definition: ${w.definition}`);
+    });
+
+    hearSentenceBtn.addEventListener("click", () => {
+      const w = getCurrentWord();
+      speak(`In a sentence: ${w.sentence}`);
+    });
+
+    revealBtn.addEventListener("click", () => {
+      const w = getCurrentWord();
+      answerInput.value = w.word;
+      definitionBox.classList.remove("hidden");
+      sentenceBox.classList.remove("hidden");
+      feedback.textContent = `The word is "${w.word}". Try to picture it in your head.`;
+      feedback.className = "feedback";
+    });
+
+    starBtn.addEventListener("click", () => {
+      const s = stats[currentIndex];
+      s.starred = !s.starred;
+      updateStarButton();
+      buildReport(); // keep report in sync
+    });
+
+    viewReportBtn.addEventListener("click", () => {
+      buildReport();
+      reportPanel.classList.toggle("hidden");
+    });
+
+    checkBtn.addEventListener("click", () => {
+      checkAnswer();
+      buildReport(); // update stats in report as we go
+    });
+
+    nextBtn.addEventListener("click", () => {
+      nextWord();
+    });
+
+    answerInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        checkAnswer();
+        buildReport();
+      }
+    });
+
+    // Initialize
+    updateUIForWord();
+  </script>
+</body>
+</html>
